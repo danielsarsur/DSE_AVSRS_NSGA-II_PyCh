@@ -1,0 +1,7 @@
+###### Requirements for PyCh ######`
+numpy
+dataclasses
+SimPy>=4.0.0
+
+###### Requirements for learning tools  ######
+matplotlib

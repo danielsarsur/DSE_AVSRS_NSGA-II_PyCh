@@ -1,0 +1,18 @@
+Metadata-Version: 2.4
+Name: PyCh
+Version: 2.2
+Summary: Discrete-event simulation tool for 4DC10
+Home-page: https://github.com/Nickp1993/4DC10
+Author: N. Paape
+Author-email: n.paape@tue.nl
+License: MIT
+Requires-Dist: simpy
+Requires-Dist: dataclasses
+Requires-Dist: numpy
+Requires-Dist: matplotlib
+Dynamic: author
+Dynamic: author-email
+Dynamic: home-page
+Dynamic: license
+Dynamic: requires-dist
+Dynamic: summary

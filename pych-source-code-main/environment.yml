@@ -1,0 +1,8 @@
+name: pychEnvDev
+channels:
+  - conda-forge
+dependencies:
+  - numpy
+  - matplotlib
+  - simpy
+  - dataclasses
