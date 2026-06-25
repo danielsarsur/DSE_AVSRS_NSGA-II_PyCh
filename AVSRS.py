@@ -27,14 +27,14 @@ def get_conveyor_time(aisle):
 class Tote:
     entrytime: float = 0.0
     id: int = 0
+    aisle: int = 0
+    tier: int = 0
     column: int = 0
     side: int = 0 # 0: Left, 1: Right
-    tier: int = 0
-    aisle: int = 0
     is_storage: bool = False
 
 @process
-def Storage_Generator(env, c_out, iat_store, empty_list):
+def Storage_Generator(env, c_store_order, iat_store, empty_list):
     id = 0
     queue = []
     iat_dist = lambda: np.random.exponential(iat_store)
@@ -42,7 +42,7 @@ def Storage_Generator(env, c_out, iat_store, empty_list):
     e_send = None
     
     while True:
-        e_send = c_out.send(queue[0]) if queue else None
+        e_send = c_store_order.send(queue[0]) if queue else None
         events = [e_iat, e_send]
         selection = yield env.select(*events)
         
@@ -57,7 +57,7 @@ def Storage_Generator(env, c_out, iat_store, empty_list):
             e_iat = env.timeout(iat_dist())
 
 @process
-def Retrieval_Generator(env, c_out, iat_retrieve, occupied_list):
+def Retrieval_Generator(env, c_retrieve_order, iat_retrieve, occupied_list):
     id = 1
     queue = []
     iat_dist = lambda: np.random.exponential(iat_retrieve)
@@ -65,7 +65,7 @@ def Retrieval_Generator(env, c_out, iat_retrieve, occupied_list):
     e_send = None
     
     while True:
-        e_send = c_out.send(queue[0]) if queue else None
+        e_send = c_retrieve_order.send(queue[0]) if queue else None
         events = [e_iat, e_send]
         selection = yield env.select(*events)
 
@@ -80,7 +80,7 @@ def Retrieval_Generator(env, c_out, iat_retrieve, occupied_list):
             e_iat = env.timeout(iat_dist())
 
 @process
-def Storage_Controller(env, c_store_to_conv, c_per_aisle, empty_list, store_policy, c_inbound_changed, Aisles, Levels, buf_cap):
+def Storage_Controller(env, c_store_order, c_store_to_conv, empty_list, store_policy, c_inbound_changed, Aisles, Levels, buf_cap):
     waitlist = defaultdict(deque)
     tote = [None for _ in range(Aisles)]
     e_receive = None
@@ -89,8 +89,8 @@ def Storage_Controller(env, c_store_to_conv, c_per_aisle, empty_list, store_poli
     bound_slots = np.full((Aisles, Levels), buf_cap)
 
     while True:
-        e_receive = c_store_to_conv.receive()
-        e_send = [c_per_aisle[i].send(tote[i]) if tote[i] is not None else None for i in range(Aisles)]
+        e_receive = c_store_order.receive()
+        e_send = [c_store_to_conv[i].send(tote[i]) if tote[i] is not None else None for i in range(Aisles)]
         e_buffer_changed = [c_inbound_changed[i].receive() for i in range(Aisles)]
 
         selection = yield env.select(e_receive, *e_send, *e_buffer_changed)
@@ -343,7 +343,7 @@ def model(Aisles, Levels, Columns, iat_retrieve, iat_store, buf_cap, store_polic
     env = Environment()
     stable_done = env.event()
 
-    # Warehouse initialization - odd columns occupied - 50% occupation
+    # Warehouse initialization - odd columns indexes occupied - 50% occupation
     coords = list(product(range(Aisles), range(Levels), range(Columns), [0, 1]))
     occupied_list = [c for c in coords if c[2] % 2 != 0]; random.shuffle(occupied_list)
     empty_list = [c for c in coords if c[2] % 2 == 0]; random.shuffle(empty_list)
